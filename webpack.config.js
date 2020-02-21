@@ -17,7 +17,7 @@ module.exports = {
   },
   plugins: [
     new AutoExport({
-      dir: ['./constant']
+      dir: ['./constant', './entry.js']
     })
   ]
 }

@@ -105,7 +105,7 @@ class AutoExport {
   }
 
   init(compilation) {
-    // 递归获取最终的js文件
+    // 递归获取js文件
     this.getFile(this.options.dir)
     // this.compileHasError = stats.hasErrors();
     // if (this.isWatching && !this.watcher && !this.compileHasError) {
@@ -116,6 +116,21 @@ class AutoExport {
     //   this.watcher.on('change', _.debounce(this.handleChange.bind(this)(), 0))
     //       .on('unlink', _.debounce(this.handleChange.bind(this)(true), 0));
     // }
+  }
+
+  getAst(filename) {
+    const content = fs.readFileSync(filename, 'utf8');
+
+    try {
+      const ast = parse(content, {
+        sourceType: 'module'
+      }); // get ast tree
+
+      return ast;
+    } catch (error) {
+      console.log(error);
+      return null;
+    }
   }
 
   handleChange(isDelete = false) {
@@ -410,21 +425,6 @@ class AutoExport {
     return Object.keys(nameMap).map(key => {
       return t.exportSpecifier(t.identifier(key), t.identifier(nameMap[key]));
     });
-  }
-
-  getAst(filename) {
-    const content = fs.readFileSync(filename, 'utf8');
-
-    try {
-      const ast = parse(content, {
-        sourceType: 'module'
-      }); // get ast tree
-
-      return ast;
-    } catch (error) {
-      console.log(error);
-      return null;
-    }
   }
 
   watchClose() {
