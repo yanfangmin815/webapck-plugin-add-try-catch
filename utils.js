@@ -40,6 +40,7 @@ const getVariableDeclarationName  = (declarations) => {
 }
 
 
+
 module.exports = {
   isExist,
   isFile,
