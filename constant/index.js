@@ -1,4 +1,4 @@
-'this is empty file...';
+'this is no-empty file...';
 
 function AA() {
   try {

@@ -1,8 +1,6 @@
 const chokidar = require('chokidar');
 
-const {
-  parse
-} = require('@babel/parser');
+const { parse } = require('@babel/parser');
 
 const fs = require('fs');
 
@@ -11,7 +9,6 @@ const path = require('path');
 const traverse = require("@babel/traverse").default;
 
 const generator = require('@babel/generator').default; // https://www.babeljs.cn/docs/6.26.3/babel-types
-
 
 const t = require('babel-types');
 
@@ -196,6 +193,7 @@ class AutoTryCatch {
           isChanged = _this.getIsHandleAst(path)
         },
       })
+      // 如果不符合条件 则不添加try...catch
       if (isChanged) {
         this.handleAst(ast, filePath)
       }
@@ -224,34 +222,39 @@ class AutoTryCatch {
     }
   }
 
-  handleAst(ast, filePath) {
-      traverse(ast, {
-        Program: {
-          exit(path) {
-              // 设置输出格式
-              const output = generator(ast, { 
-                  quotes: 'single', 
-                  retainLines: false, 
-                  compact: false,
-                  concise: false
-              });
-              fs.writeFileSync(filePath, output.code);
-          }
-      },
-      BlockStatement(path) {
-        // 加此判断保证不会在处理完成之后的栈溢出
-        // FunctionDeclaration：函数声明 
-        // ArrowFunctionExpression：箭头函数 
-        // FunctionExpression：函数表达式
-        if ((path.parentPath.type == 'FunctionDeclaration' 
-              || path.parentPath.type == 'ArrowFunctionExpression'
-              || path.parentPath.type == 'FunctionExpression') 
-              && path.node.body[0].type != 'TryStatement') {
-            const tryStatement = generateTryStatement(path.node)
-            const blockStatement = t.blockStatement([tryStatement])
-            path.replaceWith(blockStatement) // 当前节点才能实现替换
-        }
+  autoWriteFileSync(ast='', filePath='') {
+      const config = {
+        quotes: 'single', 
+        retainLines: false, 
+        compact: false,
+        concise: false
       }
+      // 设置输出格式
+      const output = generator(ast, config);
+      fs.writeFileSync(filePath, output.code);
+  }
+
+  handleAst(ast, filePath) {
+    let _this = this
+    traverse(ast, {
+      Program: {
+        exit() {
+          _this.autoWriteFileSync(ast, filePath)
+        }
+    },
+    BlockStatement(path) {
+      // 加此判断保证不会在处理完成之后的栈溢出
+      // FunctionDeclaration：函数声明 
+      // ArrowFunctionExpression：箭头函数 
+      // FunctionExpression：函数表达式
+      if ((path.parentPath.type == 'FunctionDeclaration' 
+            || path.parentPath.type == 'ArrowFunctionExpression'
+            || path.parentPath.type == 'FunctionExpression') 
+            && path.node.body[0].type != 'TryStatement') {
+          const tryStatement = generateTryStatement(path.node)
+          const blockStatement = t.blockStatement([tryStatement])
+          path.replaceWith(blockStatement) // 当前节点才能实现替换
+      }}
     })
   }
 
