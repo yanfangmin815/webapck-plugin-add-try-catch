@@ -29,6 +29,6 @@ module.exports = {
 ```
 
 ## Options
-- dir (string/array):  需要监听的目录名
+- dir (array):  需要监听的目录名
 - ignored (regexp): 过滤掉的文件名、目录名
 
