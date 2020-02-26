@@ -1,7 +1,7 @@
 function AA() {
   try {
     console.log('this is arrow function');
-    343124124;
+    console.log('this is arrow function second line');
   } catch (err) {
     console.log("err is:" + err);
   } finally {

@@ -6,21 +6,21 @@
 
 ## Install
 ```
-npm i webapck-plugin-add-try-catch -D
+npm i auto-add-try-catch -D
 ```
 
 
 ## Usage
 ```javascript
 // webpack.config.js
-const addTryCatch = require('webapck-plugin-add-try-catch')
+const addTryCatch = require('auto-add-try-catch')
 
 module.exports = {
   ...
   plugins: [
     ...
     new addTryCatch({
-      dir: ['./src', './constant'], 
+      dir: ['src', 'constant'], 
       ignored: /someFileName|someDirName/
     })
   ]
@@ -29,6 +29,6 @@ module.exports = {
 ```
 
 ## Options
-- dir (string/array):  需要监听的目录名, 相对路径 
+- dir (string/array):  需要监听的目录名
 - ignored (regexp): 过滤掉的文件名、目录名
 

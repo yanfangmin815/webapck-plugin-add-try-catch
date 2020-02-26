@@ -79,9 +79,9 @@ class AutoTryCatch {
   constructor(options = {}) {
     if (!_.isObject(options)) {
       console.log("\x1b[31m Warning: \x1b[0m  \x1b[35m Auto-Export-Plugin's options should be a object \x1b[0m ");
-      options = {};
+      options = {dir:['src']};
     } else if (options.dir && !(_.isArray(options.dir) || _.isString(options.dir))) {
-      options.dir = '.';
+      options.dir = ['src'];
       console.log("\x1b[31m Warning: \x1b[0m  \x1b[35m Auto-Export-Plugin's dir options should be a array or string  \x1b[0m ");
     } else if (options.ignored && !_.isRegExp(options.ignored)) {
       options.ignored = null;
@@ -96,33 +96,35 @@ class AutoTryCatch {
     this.pattern = ['.js']
   }
 
-  getFile(path) {
+  getFile(paths) {
     const _this = this;
-    path.map((item, index) => {
-      fs.stat(item, (firsterr, firstData) => {
+    paths.map((item, index) => {
+      const path1 = _this.getReolve(item)
+      fs.stat(path1, (firsterr, firstData) => {
         // 判断是否是文件夹
         const isDirectory1 = firstData && firstData.isDirectory()
         switch(isDirectory1){
           case true: 
-            fs.readdir(item, (err, data) => {
+            fs.readdir(path1, (err, data) => {
               if (err) throw err;
               // 判断是否是文件夹
               for (let i = 0; i < data.length; i++) {
-                fs.stat(item + '/' + data[i], function(err, stats) {
+                let path2 = _this.getReolve(item + '/' + data[i])
+                fs.stat(path2, function(err, stats) {
                   const isDirectory = stats.isDirectory()
                   if (isDirectory) {
-                    fs.readdir(item + '/' + data[i], (suberr, subdata) => {
+                    fs.readdir(path2, (suberr, subdata) => {
                       let datas = subdata.map((items, indexes) => {
                         return items = item + '/' + data[i] + '/' + items
                       })
                       _this.getFile(datas)
                     })
                   } else {
-                    const path = item + '/' + data[i]
-                    const extname = _this.getExtname(path)
+                    // const path = item + '/' + data[i]
+                    const extname = _this.getExtname(path2)
                     if (_this.pattern.includes(extname)) {
-                      const ast = _this.getAst(path);
-                      _this.handleTraverse(ast, path)
+                      const ast = _this.getAst(path2);
+                      _this.handleTraverse(ast, path2)
                     }
                   }
                 });
@@ -130,10 +132,10 @@ class AutoTryCatch {
             });
             break;
           case false:
-            const extname = _this.getExtname(item)
+            const extname = _this.getExtname(path1)
             if (_this.pattern.includes(extname)) {
-              const ast = _this.getAst(item);
-              _this.handleTraverse(ast, item)
+              const ast = _this.getAst(path1);
+              _this.handleTraverse(ast, path1)
             }
             break;
           default:
@@ -150,6 +152,11 @@ class AutoTryCatch {
     return path.extname(filePath)
   }
 
+  getReolve(filePath) {
+    // return absolute path
+    return path.resolve(filePath)
+  }
+
   init(stats) {
     // 递归获取js文件
     const { pattern, dir } = this.options
@@ -158,10 +165,7 @@ class AutoTryCatch {
     this.compileHasError = stats.hasErrors();
 
     if (this.isWatching && !this.watcher && !this.compileHasError) {
-      const dirs = dir.map((item, index) => {
-        return item.slice(2)
-      })
-      this.watcher = chokidar.watch(dirs || 'src', {
+      this.watcher = chokidar.watch(dir, {
         usePolling: true,
         ignored: this.options.ignored
       });
@@ -173,7 +177,7 @@ class AutoTryCatch {
   // 处理监控文件 判断是否需要重写
   handleChange() {
     return (pathname, stats) => {
-      const filePath = `./${pathname}`
+      const filePath = this.getReolve(pathname)
       const ast = this.getAst(filePath)
       this.handleTraverse(ast, filePath)
     }

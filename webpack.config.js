@@ -17,7 +17,7 @@ module.exports = {
   },
   plugins: [
     new AutoTryCatch({
-      dir: ['./constant'],
+      dir: ['constant'],
       pattern:['.js', '.css']
     })
   ]
