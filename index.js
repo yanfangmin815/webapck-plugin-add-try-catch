@@ -17,29 +17,6 @@ const t = require('babel-types');
 
 const _ = require('lodash');
 
-const generateTryStatementBlockStatement = () => {
-  /**
-   * object: required
-   * property: required
-   */
-  const identifier = t.identifier('console')
-  const identifier1 = t.identifier('log')
-  const memberExpression = t.memberExpression(identifier, identifier1)
-  const StringLiteral = t.stringLiteral('HELLO AST!!')
-  /**
-   * callee: required
-   * arguments: required
-   */
-  const callExpression = t.callExpression(memberExpression, [StringLiteral])
-  const expressionStatement = t.expressionStatement(callExpression)
-  /**
-   * body: Array<Statement> (required)
-   * directives: Array<Directive> (default: [])
-   */
-  const blockStatement = t.blockStatement([expressionStatement]) // param-1
-  return blockStatement
-}
-
 const generateCatchClause = () => {
   // param-2
   const identifier3 = t.identifier('err')
@@ -87,21 +64,21 @@ const generateBlockStatement2 = () => {
 /**
  * generateTryStatement:获取最终的被try...catch包裹的函数
  */
-const generateTryStatement = () => {
-  const tryStatementBlockStatement = generateTryStatementBlockStatement()
+const generateTryStatement = ({body=[]}) => {
+  const nodeBody = t.blockStatement(body)
   const catchClause = generateCatchClause()
-  const blockStatement2 = generateBlockStatement2()
+  const blockStatement = generateBlockStatement2()
   /**
    * block: BlockStatement (required)
    * handler: CatchClause (default: null)
    * finalizer: BlockStatement (default: null)
    */
-  const tryStatement = t.tryStatement(tryStatementBlockStatement, catchClause, blockStatement2)
+  const tryStatement = t.tryStatement(nodeBody, catchClause, blockStatement)
   return tryStatement
 }
 
 
-class AutoExport {
+class AutoTryCatch {
   constructor(options = {}) {
     if (!_.isObject(options)) {
       console.log("\x1b[31m Warning: \x1b[0m  \x1b[35m Auto-Export-Plugin's options should be a object \x1b[0m ");
@@ -118,8 +95,8 @@ class AutoExport {
     this.isWatching = false; // 是否watch模式
 
     this.watcher = null;
-    this.cacheExportNameMap = {};
     this.compileHasError = false;
+    this.pattern = ['.js']
   }
 
   getFile(path) {
@@ -144,29 +121,92 @@ class AutoExport {
                       _this.getFile(datas)
                     })
                   } else {
-                    const ast1 = _this.getAst(item + '/' + data[i]); // 1:path
-                    _this.handleAst(ast1, item + '/' + data[i])
+                    const path = item + '/' + data[i]
+                    const extname = _this.getExtname(path)
+                    if (_this.pattern.includes(extname)) {
+                      const ast = _this.getAst(path);
+                      _this.handleTraverse(ast, path)
+                    }
                   }
                 });
               }
             });
             break;
           case false:
-            const ast2 = _this.getAst(item); // 1:path
-            _this.handleAst(ast2, item)
+            const extname = _this.getExtname(item)
+            if (_this.pattern.includes(extname)) {
+              const ast = _this.getAst(item);
+              _this.handleTraverse(ast, item)
+            }
             break;
           default:
             console.log('\x1b[34m 这不是正确路径，请输入正确路径！ \x1b[0m');
         }
-       
       })
-     
     })
   }
 
-  init(compilation) {
+  getExtname(filePath){
+    // The path.extname() method returns the extension of the path
+    // path.extname('index.html');
+    // Returns: '.html'
+    return path.extname(filePath)
+  }
+
+  init(stats) {
     // 递归获取js文件
-    this.getFile(this.options.dir)
+    const { pattern, dir } = this.options
+    this.pattern = pattern && pattern.length && pattern || this.pattern
+    this.getFile(dir)
+    this.compileHasError = stats.hasErrors();
+
+    if (this.isWatching && !this.watcher && !this.compileHasError) {
+      const dirs = dir.map((item, index) => {
+        return item.slice(2)
+      })
+      this.watcher = chokidar.watch(dirs || 'src', {
+        usePolling: true,
+        ignored: this.options.ignored
+      });
+      this.watcher.on('change', _.debounce(this.handleChange.bind(this)(), 0))
+        .on('unlink', _.debounce(this.handleChange.bind(this)(true), 0));
+    }
+  }
+
+  // 处理监控文件 判断是否需要重写
+  handleChange() {
+    return (pathname, stats) => {
+      const filePath = `./${pathname}`
+      const ast = this.getAst(filePath)
+      this.handleTraverse(ast, filePath)
+    }
+ }
+
+  handleTraverse(ast='', filePath='') {
+      let isChanged = false
+      let _this = this
+      traverse(ast, {
+        ArrowFunctionExpression(path) {
+          isChanged = _this.getIsHandleAst(path)
+        },
+        FunctionDeclaration(path) {
+          isChanged = _this.getIsHandleAst(path)
+        },
+        FunctionExpression(path) {
+          isChanged = _this.getIsHandleAst(path)
+        },
+      })
+      if (isChanged) {
+        this.handleAst(ast, filePath)
+      }
+  }
+
+  getIsHandleAst(path) {
+    const types = path.node.body.body.map((item, index) => {
+      return item.type
+    })
+    return (path.node.body.body.length > 1 && types.includes('TryStatement')) 
+            || (path.node.body.body.length && !types.includes('TryStatement'))
   }
 
   getAst(filename) {
@@ -198,13 +238,18 @@ class AutoExport {
               fs.writeFileSync(filePath, output.code);
           }
       },
-      ExpressionStatement(path) {
+      BlockStatement(path) {
         // 加此判断保证不会在处理完成之后的栈溢出
-        if (path.parentPath.parent.type == 'FunctionDeclaration') {
-            const nodeBody = t.blockStatement([path.node])
-            const catchClause = generateCatchClause()
-            const tryStatement = t.tryStatement(nodeBody, catchClause)
-            path.replaceWith(tryStatement) // 当前节点才能实现替换
+        // FunctionDeclaration：函数声明 
+        // ArrowFunctionExpression：箭头函数 
+        // FunctionExpression：函数表达式
+        if ((path.parentPath.type == 'FunctionDeclaration' 
+              || path.parentPath.type == 'ArrowFunctionExpression'
+              || path.parentPath.type == 'FunctionExpression') 
+              && path.node.body[0].type != 'TryStatement') {
+            const tryStatement = generateTryStatement(path.node)
+            const blockStatement = t.blockStatement([tryStatement])
+            path.replaceWith(blockStatement) // 当前节点才能实现替换
         }
       }
     })
@@ -222,11 +267,11 @@ class AutoExport {
     const watchClose = this.watchClose.bind(this);
 
     if (compiler.hooks) {
-      compiler.hooks.watchRun.tap('AutoExport', () => {
+      compiler.hooks.watchRun.tap('AutoTryCatch', () => {
         this.isWatching = true;
       });
-      compiler.hooks.done.tap('AutoExport', init);
-      compiler.hooks.watchClose.tap('AutoExport', watchClose);
+      compiler.hooks.done.tap('AutoTryCatch', init);
+      compiler.hooks.watchClose.tap('AutoTryCatch', watchClose);
     } else {
       compiler.plugin('watchRun', () => {
         this.isWatching = true;
@@ -235,7 +280,6 @@ class AutoExport {
       compiler.plugin('watchClose', watchClose);
     }
   }
-
 }
 
-module.exports = AutoExport;
+module.exports = AutoTryCatch;

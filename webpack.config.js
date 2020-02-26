@@ -1,6 +1,6 @@
 const path = require('path')
 const nodeExternals = require('webpack-node-externals')
-const AutoExport = require('./index')
+const AutoTryCatch = require('./index')
 module.exports = {
   entry: './entry.js',
   output: {
@@ -16,8 +16,9 @@ module.exports = {
     ]
   },
   plugins: [
-    new AutoExport({
-      dir: ['./constant']
+    new AutoTryCatch({
+      dir: ['./constant'],
+      pattern:['.js', '.css']
     })
   ]
 }
