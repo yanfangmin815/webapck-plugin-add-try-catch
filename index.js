@@ -78,14 +78,14 @@ const generateTryStatement = ({body=[]}) => {
 class AutoTryCatch {
   constructor(options = {}) {
     if (!_.isObject(options)) {
-      console.log("\x1b[31m Warning: \x1b[0m  \x1b[35m Auto-Export-Plugin's options should be a object \x1b[0m ");
+      console.log("\x1b[31m Warning: \x1b[0m  \x1b[35m auto-add-try-catch's options should be a object \x1b[0m ");
       options = {dir:['src']};
     } else if (options.dir && !(_.isArray(options.dir) || _.isString(options.dir))) {
       options.dir = ['src'];
-      console.log("\x1b[31m Warning: \x1b[0m  \x1b[35m Auto-Export-Plugin's dir options should be a array or string  \x1b[0m ");
+      console.log("\x1b[31m Warning: \x1b[0m  \x1b[35m auto-add-try-catch's dir options should be a array  \x1b[0m ");
     } else if (options.ignored && !_.isRegExp(options.ignored)) {
       options.ignored = null;
-      console.log("\x1b[31m Warning: \x1b[0m  \x1b[35m Auto-Export-Plugin's ignored options should be a regexp  \x1b[0m ");
+      console.log("\x1b[31m Warning: \x1b[0m  \x1b[35m auto-add-try-catch's ignored options should be a regexp  \x1b[0m ");
     }
 
     this.options = options;
