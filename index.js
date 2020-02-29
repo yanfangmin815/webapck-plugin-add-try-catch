@@ -196,6 +196,10 @@ class AutoTryCatch {
         FunctionExpression(path) {
           isChanged = _this.getIsHandleAst(path)
         },
+        DebuggerStatement(path) { // 判断是否有debugger
+          isChanged = true
+          path.remove()
+        }
       })
       // 如果不符合条件 则不添加try...catch
       if (isChanged) {
