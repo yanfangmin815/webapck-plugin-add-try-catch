@@ -6,14 +6,14 @@
 
 ## Install
 ```
-npm i auto-add-try-catch -D
+npm i auto-try-catch -D
 ```
 
 
 ## Usage
 ```javascript
 // webpack.config.js
-const addTryCatch = require('auto-add-try-catch')
+const addTryCatch = require('auto-try-catch')
 
 module.exports = {
   ...

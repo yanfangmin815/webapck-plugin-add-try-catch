@@ -1,9 +1,9 @@
 {
-  "name": "auto-add-try-catch",
-  "version": "2.0.0",
-  "description": "auto-add-try-catch",
+  "name": "auto-try-catch",
+  "version": "0.0.1",
+  "description": "auto-try-catchh",
   "keywords": [
-    "auto-add-try-catch"
+    "auto-try-catch"
   ],
   "main": "dist/index.js",
   "scripts": {
