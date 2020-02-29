@@ -165,6 +165,7 @@ class AutoTryCatch {
     this.compileHasError = stats.hasErrors();
 
     if (this.isWatching && !this.watcher && !this.compileHasError) {
+      // https://www.npmjs.com/package/chokidar
       this.watcher = chokidar.watch(dir, {
         usePolling: true,
         ignored: this.options.ignored
