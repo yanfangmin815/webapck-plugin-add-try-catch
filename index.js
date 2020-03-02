@@ -263,7 +263,8 @@ class AutoTryCatch {
           const tryStatement = generateTryStatement(path.node)
           const blockStatement = t.blockStatement([tryStatement])
           path.replaceWith(blockStatement) // 当前节点才能实现替换
-      }}
+      }},
+     
     })
   }
 
