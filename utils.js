@@ -39,7 +39,13 @@ const getVariableDeclarationName  = (declarations) => {
   }, {})
 }
 
-
+const statisticsTimes = (arr, key) => {
+  let newArr = arr.reduce((pre,next) => {
+    pre[next] ? pre[next]++ : pre[next] = 1
+    return pre
+  },{})
+  return newArr[key]
+}
 
 module.exports = {
   isExist,
@@ -47,5 +53,6 @@ module.exports = {
   isDir,
   getPath,
   getRealFilePath,
-  getVariableDeclarationName
+  getVariableDeclarationName,
+  statisticsTimes
 }

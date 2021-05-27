@@ -1,3 +1,5 @@
+const { statisticsTimes }  = require('./utils')
+
 const chokidar = require('chokidar');
 
 const { parse } = require('@babel/parser');
@@ -185,35 +187,43 @@ class AutoTryCatch {
  }
 
   handleTraverse(ast='', filePath='') {
-      let isChanged = false
+      let importVars = []
+      let allVars = []
+      let nameArr = []
+      let exportSpecifierArr = []
       let _this = this
       traverse(ast, {
-        ArrowFunctionExpression(path) {
-          isChanged = _this.getIsHandleAst(path)
+        Program: {
+          exit() {
+            console.log( exportSpecifierArr)
+            importVars.map(item => {
+              if(statisticsTimes(nameArr, item.name) == 1) item.path.remove()
+            })
+            _this.handleAst(ast, filePath)
+          }
         },
-        FunctionDeclaration(path) {
-          isChanged = _this.getIsHandleAst(path)
+        ImportSpecifier(path) {
+          importVars.push({path, name: path.node.imported.name})
         },
-        FunctionExpression(path) {
-          isChanged = _this.getIsHandleAst(path)
+        
+        Identifier(path) {
+          // 获取字符串出现位置 以区分是否是同一个字段
+          const obj = {
+            start: path.node.start,
+            end: path.node.end,
+            name: path.node.name
+          }
+          let canPush = false
+          allVars.map(item => {
+            if(item.start == obj.start || item.end == obj.end) { canPush = true }
+          })
+          !canPush && allVars.push(obj)
+          nameArr = allVars.map(item => item.name)
         },
-        DebuggerStatement(path) { // 判断是否有debugger
-          isChanged = true
-          path.remove()
+        ExportSpecifier(path) {
+          exportSpecifierArr.push({path, name: path.node.exported.name})
         }
       })
-      // 如果不符合条件 则不添加try...catch
-      if (isChanged) {
-        this.handleAst(ast, filePath)
-      }
-  }
-
-  getIsHandleAst(path) {
-    const types = path.node.body.body.map((item, index) => {
-      return item.type
-    })
-    return (path.node.body.body.length > 1 && types.includes('TryStatement')) 
-            || (path.node.body.body.length && !types.includes('TryStatement'))
   }
 
   getAst(filename) {
@@ -243,28 +253,14 @@ class AutoTryCatch {
       fs.writeFileSync(filePath, output.code);
   }
 
-  handleAst(ast, filePath) {
+  handleAst(ast, filePath, allVars) {
     let _this = this
     traverse(ast, {
       Program: {
         exit() {
           _this.autoWriteFileSync(ast, filePath)
         }
-    },
-    BlockStatement(path) {
-      // 加此判断保证不会在处理完成之后的栈溢出
-      // FunctionDeclaration：函数声明 
-      // ArrowFunctionExpression：箭头函数 
-      // FunctionExpression：函数表达式
-      if ((path.parentPath.type == 'FunctionDeclaration' 
-            || path.parentPath.type == 'ArrowFunctionExpression'
-            || path.parentPath.type == 'FunctionExpression') 
-            && path.node.body[0].type != 'TryStatement') {
-          const tryStatement = generateTryStatement(path.node)
-          const blockStatement = t.blockStatement([tryStatement])
-          path.replaceWith(blockStatement) // 当前节点才能实现替换
-      }},
-     
+      }
     })
   }
 

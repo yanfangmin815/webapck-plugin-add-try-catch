@@ -1,8 +1,8 @@
-function test() {
+function testVice() {
   try {} catch (err) {} finally {}
 }
 
-function testUseful() {
+function testUsefulVice() {
   try {
     console.log('this function is usefull...');
   } catch (err) {
@@ -12,4 +12,4 @@ function testUseful() {
   }
 }
 
-export { test, testUseful };
+export { testVice, testUsefulVice };
