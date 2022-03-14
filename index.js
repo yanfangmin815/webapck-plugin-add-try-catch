@@ -96,6 +96,26 @@ class AutoTryCatch {
     this.pattern = ['.js']
   }
 
+  // 实例化时调用 apply
+  apply(compiler) {
+    const init = this.init.bind(this);
+    const watchClose = this.watchClose.bind(this);
+
+    if (compiler.hooks) {
+      compiler.hooks.watchRun.tap('AutoTryCatch', () => {
+        this.isWatching = true;
+      });
+      compiler.hooks.done.tap('AutoTryCatch', init);
+      compiler.hooks.watchClose.tap('AutoTryCatch', watchClose);
+    } else {
+      compiler.plugin('watchRun', () => {
+        this.isWatching = true;
+      });
+      compiler.plugin('done', init);
+      compiler.plugin('watchClose', watchClose);
+    }
+  }
+
   getFile(paths) {
     const _this = this;
     paths.map((item, index) => {
@@ -271,26 +291,6 @@ class AutoTryCatch {
   watchClose() {
     if (this.watcher) {
       this.watcher.close();
-    }
-  } 
-
-  // 实例化时调用 apply
-  apply(compiler) {
-    const init = this.init.bind(this);
-    const watchClose = this.watchClose.bind(this);
-
-    if (compiler.hooks) {
-      compiler.hooks.watchRun.tap('AutoTryCatch', () => {
-        this.isWatching = true;
-      });
-      compiler.hooks.done.tap('AutoTryCatch', init);
-      compiler.hooks.watchClose.tap('AutoTryCatch', watchClose);
-    } else {
-      compiler.plugin('watchRun', () => {
-        this.isWatching = true;
-      });
-      compiler.plugin('done', init);
-      compiler.plugin('watchClose', watchClose);
     }
   }
 }
